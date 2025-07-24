@@ -1,30 +1,31 @@
-import time
-from utils.logger import logger
+from abc import ABC, abstractmethod
+from typing import Dict, Any, List
+import logging
 
-class BaseAgent:
+class BaseAgent(ABC):
     def __init__(self, name: str):
         self.name = name
-
-    def process(self, query: dict) -> dict:
-        """
-        각 Agent가 반드시 구현해야 하는 핵심 메서드.
-        예: structured dict → 결과 dict
-        """
-        raise NotImplementedError(f"{self.name} 에이전트는 process()를 구현해야 합니다.")
-
-    def call_api(self, fn, *args, retries: int = 2, delay: float = 0.5):
-        """
-        공통 API 호출 유틸 (재시도 포함).
-        :param fn: 호출할 함수
-        :param args: 함수 인자들
-        :param retries: 최대 재시도 횟수
-        :param delay: 실패 시 대기 시간 (초)
-        """
-        for attempt in range(retries + 1):
-            try:
-                return fn(*args)
-            except Exception as e:
-                logger.warning(f"[{self.name}] API 호출 실패 ({attempt + 1}/{retries}): {e}")
-                time.sleep(delay)
-
-        raise RuntimeError(f"[{self.name}] 최대 재시도 실패 - API 호출 불가")
+        self.logger = logging.getLogger(name)
+        
+    @abstractmethod
+    def process(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        """에이전트의 핵심 처리 로직"""
+        pass
+    
+    def log_info(self, message: str):
+        """정보 로그 출력"""
+        self.logger.info(f"[{self.name}] {message}")
+        print(f"[{self.name}] {message}")
+    
+    def log_error(self, message: str):
+        """에러 로그 출력"""
+        self.logger.error(f"[{self.name}] ERROR: {message}")
+        print(f"[{self.name}] ERROR: {message}")
+    
+    def validate_input(self, input_data: Dict[str, Any], required_keys: List[str]) -> bool:
+        """입력 데이터 검증"""
+        for key in required_keys:
+            if key not in input_data:
+                self.log_error(f"Required key '{key}' not found in input data")
+                return False
+        return True
